@@ -1,0 +1,213 @@
+<<Instructions: Note that you can find the image folders I refer to below in the media folder>>
+<<Header>> Project 1: Images of the Russian Empire -- Colorizing the Prokudin-Gorskii Photo Collection
+
+This project focuses on digitally reconstructing early 20th-century
+color photographs taken by Sergei Mikhailovich Prokudin-Gorskii.
+His method captured three sequential exposures of the same scene
+using red, green, and blue filters, which were later digitized by
+the Library of Congress. The task is to transform these stacked
+grayscale glass plate scans into coherent color images by
+automatically aligning the three channels.
+
+To achieve this, the project requires dividing each plate into
+equal thirds (corresponding to B, G, R channels), then aligning
+them with translation-only shifts to minimize misregistration
+artifacts. Alignment is evaluated using image similarity metrics
+such as L2 norm or normalized cross-correlation (NCC), with exhaustive
+search used for small displacements. For larger, high-resolution
+images, a coarse-to-fine image pyramid approach is implemented to
+efficiently estimate alignment.
+
+
+Part 1: Single-Scale Alignment
+
+For the single-scale alignment, I implemented a naive algorithm which searches within a window of
+displacements and scores each attempt at alignment given a specific displacement vector using the L2 norm
+and NCC. The window I used was [-15, 15] pixels. Below are results prior to and after single-scale alignment.
+Note that dx here refers to the rows, and dy refers to the columns.
+
+<<Instruction: include the cathedral.jpg, tobolsk.jpg, and monastery.jpg figures here. Each of these has two copies, one from the unaligned_results folder,
+and one from the results folder, so you will have to get both of them and display them nicely to show the comparison. For the aligned ones, you will also have
+to mention the dx and dy used for alignment for the green and red channels. For monastery, the green displacement is (-3, 2) and the red displacement is (3, 2).
+For tobolsk, green is (3, 2) and red is (6, 3), and for cathedral, green is (5, 2) and red is (12, 3). Include these below the aligned figures. Also display
+the time taken to align each of these in seconds. The time for monastery was 0.84 seconds, the time for tobolsk was 0.82 seconds, and the time for cathedral
+was 0.8 seconds.>>
+
+Part 2: Multi-Scale Alignment
+For larger images, this naive search can become very slow. To address this, I implemented a Gaussian Pyramid. The Pyramid performs a cross-correlation operation
+using a Gaussian kernel to smoothly blur the image to prevent aliasing, after which the image is subsampled by a scale of 2. I repeat this until there are
+at least 100 pixels left in either dimension of the image. Note that due to the symmetry of the Gaussian kernel, the cross-correlation operation is equivalent
+to a convolution.
+
+Rather than use `cv.resize`, I decided to manually construct a Gaussian kernel and apply it to the image. I also decided not to use `np.sliding_windows` to apply
+the kernel, and instead wrote my own highly vectorized function that applies the Gaussian kernel. My implementation is around ~8 lines of code and
+achieves a 160x speedup (~0.2 sec) than applying the Gaussian kernel pixel-by-pixel naively (~25 sec) using many for-loops for a 3x3 Gaussian kernel.
+<<Instruction, highlight the speedup part in this previous sentence>>
+
+Problems encountered: <<Highlight/bold this problems encountered title. It isn't a separate section, but just a subsection>>
+In my multi-scale alignment implementation, I was finding that just using the Gaussian Pyramid by itself was not entirely sufficient for
+all images, since noisy edges corrupted the L2 / NCC scores. Thus, I decided to perform manual cropping on the edges of images. After
+playing around with some of the parameters (crop percentage, kernel size, Gaussian standard deviation, etc), I ended up using the following
+parameters for all images shown below: cropped the top and left sides by 4.3% and bottom and right sides by 4%, used a 5x5 kernel, with a standard
+deviation of 2.
+
+Below are the large TIF images produced using the parameters specified above and scored using NCC.
+
+<<Include all images from the results folder for which I am providing the data below. In the data, the file names
+are specified as .tif files, but in the results folder they are .jpg files, so make note of that. Also, again include the displacement
+vector for green (written as g=[dx, dy]) and red (written as r=[dx, dy]), and also include the times rounded to the second decimal place.
+Ignore all the other text in the data. Also there is no unaligned_results folder for this so you don't have to worry about that. Only include
+the aligned photos along with their displacement vectors and times in seconds.
+Data:
+original shape: (3209, 3702, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[49, 24], r=[104, 44]
+
+time taken for emir.tif: 9.045256334007718
+original shape: (3231, 3719, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[38, 21], r=[77, 35]
+
+time taken for italil.tif: 9.23016891698353
+original shape: (3202, 3634, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[25, -11], r=[58, -5]
+
+time taken for church.tif: 9.010630666976795
+original shape: (3209, 3714, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[55, 13], r=[111, 10]
+
+time taken for three_generations.tif: 9.188225958991097
+original shape: (3244, 3779, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[41, -17], r=[92, -28]
+
+time taken for lugano.tif: 9.447936124983244
+original shape: (3241, 3770, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[83, 9], r=[177, 11]
+
+time taken for melons.tif: 9.32982566699502
+original shape: (3241, 3700, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[-3, -2], r=[76, -9]
+
+time taken for lastochikino.tif: 9.86850099998992
+original shape: (3244, 3741, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[41, 17], r=[89, 23]
+
+time taken for icon.tif: 9.566695540997898
+original shape: (3250, 3817, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[49, -7], r=[96, -25]
+
+time taken for siren.tif: 9.695265250018565
+original shape: (3251, 3810, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[78, 26], r=[175, 34]
+
+time taken for self_portrait.tif: 9.460990667022998
+original shape: (3218, 3683, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[60, 16], r=[125, 14]
+
+time taken for harvesters.tif: 9.092306417005602
+>>
+
+
+Bonus Images: <<Also bold the bonus images part>>
+This section contains a few examples from the Prokudin-Gorskii collection of my own choosing.
+<<Include only the bonus_1, bonus_2, and bonus_3 images from the results folder. I am also providing data for them below. In the data, the file names
+are specified as .tif files, but in the results folder they are .jpg files, so make note of that. Also, again include the displacement
+vector for green (written as g=[dx, dy]) and red (written as r=[dx, dy]), and also include the times rounded to the second decimal place.
+Ignore all the other text in the data. Also there is no unaligned_results folder for this so you don't have to worry about that. Only include
+the aligned photos along with their displacement vectors and times in seconds.
+Data:
+original shape: (3218, 3771, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[57, -29], r=[131, -58]
+
+time taken for bonus_2.tif: 9.922640750010032
+original shape: (3260, 3781, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[33, 7], r=[114, 13]
+
+time taken for bonus_3.tif: 9.978782416001195
+original shape: (3221, 3800, 3)
+using displacement 20
+using displacement 10
+using displacement 6
+using displacement 5
+using displacement 4
+using displacement 3
+Total displacement: g=[56, 21], r=[122, 40]
+
+time taken for bonus_1.tif: 9.664032500004396
+>>
