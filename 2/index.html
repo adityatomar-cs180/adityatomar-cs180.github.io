@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS180 Project 2: Fun with Filters and Frequencies</title>
+  <link rel="stylesheet" href="styles.css">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="CS180 Project 2: Filters, Frequencies, and Multi-resolution Blending">
+  <meta name="robots" content="noindex, nofollow">
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <h1>Project 2: Fun with Filters and Frequencies</h1>
+    </header>
+    
+    <!-- PART 1: FUN WITH FILTERS -->
+    <section class="section" id="part-1">
+      <h2>Part 1: Fun with Filters</h2>
+      
+      <!-- Part 1.1 -->
+      <h3>Part 1.1: Convolutions from Scratch!</h3>
+      <p>In this section, I implemented 2D convolution from scratch using both 4 for-loops and 2 for-loops, with zero-padding to maintain "same" mode. I then compared the runtime and output with scipy's built-in <code>convolve2d</code> function.</p>
+      
+      <div class="description">
+        <p><strong>Implementation Details:</strong> Both implementations use zero-padding to handle boundaries. The 4-loop version iterates over each pixel and each kernel element. The 2-loop version is optimized by pre-flipping the kernel and using NumPy's array slicing for element-wise multiplication, which is significantly faster.</p>
+      </div>
+      
+      <div class="code-block">
+<pre># 4-loop implementation with "same" padding
+def conv2d_forloop_4(img, kernel):
+    pad_x = (kernel.shape[0] - 1) // 2
+    pad_y = (kernel.shape[1] - 1) // 2
+    padded = np.pad(img, pad_width=((pad_x, pad_x), (pad_y, pad_y)))
+    out_img = np.zeros_like(img)
+    
+    for x in range(img.shape[0]):
+        for y in range(img.shape[1]):
+            accumulator = 0
+            for k_x in range(kernel.shape[0]):
+                for k_y in range(kernel.shape[1]):
+                    k_x_flip = kernel.shape[0] - k_x - 1
+                    k_y_flip = kernel.shape[1] - k_y - 1
+                    accumulator += kernel[k_x_flip][k_y_flip] * padded[x + k_x][y + k_y]
+            out_img[x][y] = accumulator
+    
+    return out_img
+
+# 2-loop implementation with "same" padding
+def conv2d_forloop_2(img, kernel):
+    pad_x = (kernel.shape[0] - 1) // 2
+    pad_y = (kernel.shape[1] - 1) // 2
+    padded = np.pad(img, pad_width=((pad_x, pad_x), (pad_y, pad_y)))
+    out_img = np.zeros_like(img)
+    k_w, k_h = kernel.shape[0], kernel.shape[1]
+    
+    kernel_flipped = np.zeros_like(kernel)
+    for i in range(k_w):
+        for j in range(k_h):
+            kernel_flipped[i][j] = kernel[k_w - i - 1, k_h - j - 1]
+    
+    for i in range(k_w):
+        for j in range(k_h):
+            out_img += kernel_flipped[i, j] * padded[i: padded.shape[0] - (k_w - i - 1), j: padded.shape[1] - (k_h - j - 1)]
+    
+    return out_img</pre>
+      </div>
+      
+      <h3>Results: Box Filter (9x9)</h3>
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_1_1/oski.jpeg" alt="Original Oski">
+          <figcaption><strong>Original Image</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_1_1/box_filter_img.png" alt="Box Filter Result">
+          <figcaption><strong>Box Filter Result</strong><br>9×9 averaging filter</figcaption>
+        </figure>
+      </div>
+      
+      <div class="description">
+        <p><strong>Runtime Comparison (Box Filter):</strong></p>
+        <ul>
+          <li>4-loop implementation: 1.901484 seconds</li>
+          <li>2-loop implementation: 0.001891 seconds (1005× speedup over 4-loop)</li>
+          <li>scipy.signal.convolve2d: 0.005607 seconds (2.96× slower than 2-loop)</li>
+        </ul>
+        <p><strong>Boundary Handling:</strong> Both my implementations use zero-padding with "same" mode (implemented using np.pad), matching scipy's behavior with <code>boundary="fill", fillvalue=0</code>. The 2-loop version achieves faster performance than scipy by leveraging NumPy's optimized array operations.</p>
+      </div>
+      
+      <h3>Results: Finite Difference Operators</h3>
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_1_1/d_x_filter_img.png" alt="D_x Filter">
+          <figcaption><strong>D<sub>x</sub> Filter</strong><br>Horizontal edges</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_1_1/d_y_filter_img.png" alt="D_y Filter">
+          <figcaption><strong>D<sub>y</sub> Filter</strong><br>Vertical edges</figcaption>
+        </figure>
+      </div>
+      
+      <div class="description">
+        <p><strong>Runtime Comparison (D<sub>x</sub> Filter):</strong></p>
+        <ul>
+          <li>4-loop: 0.232052 seconds</li>
+          <li>2-loop: 0.000255 seconds (911× speedup)</li>
+          <li>scipy: 0.000491 seconds (1.93× slower than 2-loop)</li>
+        </ul>
+        <p><strong>Runtime Comparison (D<sub>y</sub> Filter):</strong></p>
+        <ul>
+          <li>4-loop: 0.237880 seconds</li>
+          <li>2-loop: 0.000235 seconds (1010× speedup)</li>
+          <li>scipy: 0.000661 seconds (2.81× slower than 2-loop)</li>
+        </ul>
+      </div>
+    </section>
+    
+    <!-- Part 1.2 -->
+    <section class="section" id="part-1-2">
+      <h2>Part 1.2: Finite Difference Operator</h2>
+      <p>Applying finite difference operators D<sub>x</sub> = [1, 0, -1] and D<sub>y</sub> = [1, 0, -1]<sup>T</sup> to the cameraman image to detect edges.</p>
+      
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_1_2/cameraman.png" alt="Original Cameraman">
+          <figcaption><strong>Original Image</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_1_2/d_x_filter_img.png" alt="D_x Filter">
+          <figcaption><strong>Partial Derivative in X</strong><br>Vertical edges detected</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_1_2/d_y_filter_img.png" alt="D_y Filter">
+          <figcaption><strong>Partial Derivative in Y</strong><br>Horizontal edges detected</figcaption>
+        </figure>
+      </div>
+      
+      <h3>Gradient Magnitude and Edge Detection</h3>
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_1_2/grad_img.png" alt="Gradient Magnitude">
+          <figcaption><strong>Gradient Magnitude</strong><br>\(\sqrt{(\partial_x I)^2 + (\partial_y I)^2}\)</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_1_2/binarized_grad_img.png" alt="Binarized Edges">
+          <figcaption><strong>Binarized Edge Image</strong><br>Threshold = 0.3</figcaption>
+        </figure>
+      </div>
+      
+      <div class="description">
+        <p><strong>Threshold Selection Justification:</strong> I chose a threshold of 0.3 to balance between detecting all significant edges and suppressing noise. This threshold successfully captures the major edges (cameraman silhouette, tripod, camera) while minimizing false edges from texture and noise in the background.</p>
+      </div>
+    </section>
+    
+    <!-- Part 1.3 -->
+    <section class="section" id="part-1-3">
+      <h2>Part 1.3: Derivative of Gaussian (DoG) Filter</h2>
+      <p>The finite difference operator produces noisy results. By first smoothing the image with a Gaussian filter, we can obtain cleaner edge detection.</p>
+      
+      <h3>Method 1: Gaussian Smoothing then Finite Difference</h3>
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_1_3/blurred_img.png" alt="Blurred Image">
+          <figcaption><strong>Gaussian Blurred Image</strong><br>σ = 1, kernel size = 3</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_1_3/d_x_filter_img.png" alt="Blurred D_x">
+          <figcaption><strong>D<sub>x</sub> of Blurred Image</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_1_3/d_y_filter_img.png" alt="Blurred D_y">
+          <figcaption><strong>D<sub>y</sub> of Blurred Image</strong></figcaption>
+        </figure>
+      </div>
+      
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_1_3/blurred_grad_img.png" alt="Blurred Gradient">
+          <figcaption><strong>Gradient Magnitude (Blurred)</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_1_3/binarized_blurred_grad_img.png" alt="Binarized Blurred">
+          <figcaption><strong>Binarized Edges (Blurred)</strong><br>Threshold = 0.3</figcaption>
+        </figure>
+      </div>
+      
+      <div class="description">
+        <p><strong>Differences Observed:</strong> After Gaussian smoothing, the edges are much cleaner with significantly less noise. The grass texture and background noise are suppressed, while the main structural edges (cameraman outline, tripod legs) remain clear and continuous. The trade-off is slightly thicker edges due to blurring.</p>
+      </div>
+      
+      <h3>Method 2: Derivative of Gaussian (DoG) Filters</h3>
+      <p>Instead of two convolutions, we can create Derivative of Gaussian filters by convolving the Gaussian with the finite difference operators, then applying a single convolution. Note that I use "full" convolution mode (not "same") to convolve the Gaussian kernel with the finite difference operators.</p>
+      
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_1_3/gaussian_kernel.png" alt="Gaussian Kernel">
+          <figcaption><strong>Gaussian Kernel</strong><br>3×3, σ = 1</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_1_3/d_x_g.png" alt="DoG X">
+          <figcaption><strong>DoG<sub>x</sub> Filter</strong><br>G * D<sub>x</sub></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_1_3/d_y_g.png" alt="DoG Y">
+          <figcaption><strong>DoG<sub>y</sub> Filter</strong><br>G * D<sub>y</sub></figcaption>
+        </figure>
+      </div>
+      
+      <div class="description">
+        <p><strong>Why Full Convolution Mode?</strong> The Gaussian kernel is 3×3, D<sub>x</sub> is 1×3, and D<sub>y</sub> is 3×1. With full convolution:</p>
+        <ul>
+          <li>DoG<sub>x</sub>: [3×3] * [1×3] → [3×5] (rows: 3+1-1=3, cols: 3+3-1=5)</li>
+          <li>DoG<sub>y</sub>: [3×3] * [3×1] → [5×3] (rows: 3+3-1=5, cols: 3+1-1=3)</li>
+        </ul>
+        <p>I use "full" mode because it preserves all information from both filters without truncating edges. This ensures the DoG filter captures the complete interaction between the Gaussian smoothing and the derivative operation. If I used "same" mode, we would lose important edge information where the derivative operator extends beyond the Gaussian kernel boundaries.</p>
+        
+        <p><strong>Verification:</strong> Applying the DoG filters directly to the original image produces identical results to Method 1 (smoothing first, then taking derivatives). This demonstrates the associativity of convolution: (G * D) * I = G * (D * I). The DoG approach is more efficient as it requires only one convolution per direction instead of two.</p>
+      </div>
+    </section>
+    
+    <!-- PART 2: FUN WITH FREQUENCIES -->
+    <section class="section" id="part-2">
+      <h2>Part 2: Fun with Frequencies!</h2>
+      
+      <!-- Part 2.1 -->
+      <h3>Part 2.1: Image "Sharpening"</h3>
+      <p>Using the unsharp masking technique to enhance image sharpness by amplifying high frequencies.</p>
+      
+      <div class="description">
+        <p><strong>Unsharp Mask Filter Derivation:</strong></p>
+        <div class="math-block">
+          Let \(I\) be the original image, \(G\) be a Gaussian filter, and \(\alpha\) be the sharpening factor.
+          
+          <p style="margin-top:12px;margin-bottom:8px;">Step-by-step derivation:</p>
+          \begin{align}
+          I_{\text{sharp}} &= I + \alpha \cdot (I - (G * I)) \\
+          &= I + \alpha \cdot I - \alpha \cdot (G * I) \\
+          &= (1 + \alpha) \cdot I - \alpha \cdot (G * I) \\
+          &= [(1 + \alpha) \cdot \delta - \alpha \cdot G] * I
+          \end{align}
+          
+          <p style="margin-top:12px;">Where \(\delta\) is the impulse (identity) filter. Thus, the unsharp mask kernel is:</p>
+          \[
+          K_{\text{unsharp}} = (1 + \alpha) \cdot \delta - \alpha \cdot G
+          \]
+          <p style="margin-top:8px;">This allows us to perform sharpening with a single convolution operation.</p>
+        </div>
+      </div>
+
+      <div class="description">
+        <p><strong>How Unsharp Masking Works:</strong> The technique is based on separating an image into low and high frequency components. When we apply a Gaussian blur to an image, we obtain only the low frequencies (smooth variations in color and brightness). By subtracting this blurred version from the original image, we isolate the high frequencies (edges, fine details, and textures). The unsharp mask then adds a scaled version of these high frequencies back to the original image, effectively amplifying edges and details while preserving the overall structure.</p>
+      </div>
+      
+      <h3>Example 1: Taj Mahal (Provided Image)</h3>
+      <div class="comparison-row" style="grid-template-columns: repeat(4, 1fr);">
+        <figure class="media">
+          <img src="part_2_1/taj.jpg" alt="Original Taj">
+          <figcaption><strong>Original Taj Mahal</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_1/blurred_taj.png" alt="Blurred Taj">
+          <figcaption><strong>Blurred Version</strong><br>Low frequencies only</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_1/new_taj.png" alt="Sharpened Taj">
+          <figcaption><strong>Sharpened Image</strong><br>α = 5</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_1/sharpness_15_new_taj.png" alt="Sharpened Taj 15">
+          <figcaption><strong>Sharpened Image</strong><br>α = 15</figcaption>
+        </figure>
+      </div>
+      
+      <h3>Example 2: Palace of Versailles</h3>
+      <div class="comparison-row" style="grid-template-columns: repeat(4, 1fr);">
+        <figure class="media">
+          <img src="part_2_1/palace_versailles.jpeg" alt="Original Palace">
+          <figcaption><strong>Original Palace</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_1/blurred_palace.png" alt="Blurred Palace">
+          <figcaption><strong>Blurred Version</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_1/new_palace.png" alt="Sharpened Palace">
+          <figcaption><strong>Sharpened Image</strong><br>α = 5</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_1/sharpness_15_new_palace.png" alt="Sharpened Palace 15">
+          <figcaption><strong>Sharpened Image</strong><br>α = 15</figcaption>
+        </figure>
+      </div>
+      
+      <div class="description">
+        <p><strong>Observations:</strong> The unsharp mask filter successfully enhances fine details and edges in both images. In the Taj Mahal, architectural details become more pronounced with each increase in sharpening factor. In the Palace of Versailles, the ornate details and window structures are significantly enhanced. The sharpening factor α = 5 provides strong enhancement without introducing excessive ringing artifacts. With α = 15, the sharpening becomes much more dramatic. Edges and fine details are heavily amplified, creating a very grainy appearance. This higher value also introduces more visible artifacts and can make the images appear somewhat artificial. This demonstrates the trade-off: higher sharpening factors create more dramatic enhancement but risk over-sharpening and unnatural-looking results.</p>
+      </div>
+    </section>
+    
+    <!-- Part 2.2 -->
+    <section class="section" id="part-2-2">
+      <h2>Part 2.2: Hybrid Images</h2>
+      <p>Creating hybrid images that change interpretation based on viewing distance by combining low frequencies from one image with high frequencies from another.</p>
+      
+      <h3>Example 1: Derek + Nutmeg (Full Process)</h3>
+      <p>This example demonstrates the complete hybrid image pipeline with frequency analysis.</p>
+      
+      <h4>Original Images and Fourier Transforms</h4>
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_2_2/DerekPicture.jpg" alt="Derek">
+          <figcaption><strong>Derek (Low Freq Source)</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_2/derek_fourier.png" alt="Derek Fourier">
+          <figcaption><strong>Derek - Fourier Transform</strong><br>Log magnitude spectrum</figcaption>
+        </figure>
+      </div>
+      
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_2_2/nutmeg.jpg" alt="Nutmeg">
+          <figcaption><strong>Nutmeg (High Freq Source)</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_2/nutmeg_fourier.png" alt="Nutmeg Fourier">
+          <figcaption><strong>Nutmeg - Fourier Transform</strong><br>Log magnitude spectrum</figcaption>
+        </figure>
+      </div>
+      
+      <h4>Filtered Images and Their Fourier Transforms</h4>
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_2_2/derek_filtered_fourier.png" alt="Derek Filtered Fourier">
+          <figcaption><strong>Derek Low-Pass Filtered</strong><br>Fourier transform<br>σ<sub>1</sub> = 60, kernel = 21×21</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_2/nutmeg_filtered_fourier.png" alt="Nutmeg Filtered Fourier">
+          <figcaption><strong>Nutmeg High-Pass Filtered</strong><br>Fourier transform<br>σ<sub>2</sub> = 200, kernel = 51×51</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_2/derek_nutmeg_hybrid_fourier.png" alt="Hybrid Fourier">
+          <figcaption><strong>Hybrid Image</strong><br>Fourier transform</figcaption>
+        </figure>
+      </div>
+      
+      <h4>Final Hybrid Image</h4>
+      <div class="center-media">
+        <figure class="media">
+          <img src="part_2_2/derek_nutmeg_hybrid.png" alt="Derek Nutmeg Hybrid">
+          <figcaption><strong>Derek + Nutmeg Hybrid</strong><br>View from close: see Nutmeg details<br>View from far: see Derek</figcaption>
+        </figure>
+      </div>
+      
+      <div class="description">
+        <p><strong>Cutoff Frequency Choice:</strong> For Derek (low-pass), I used σ = 60 with a 21×21 kernel to retain smooth facial features and overall structure. For Nutmeg (high-pass), I used σ = 200 with a 51×51 kernel to extract fine details like whiskers and fur texture. The high-pass cutoff is larger to ensure most low frequencies are removed, allowing Derek's face to dominate at far viewing distances.</p>
+      </div>
+      
+      <h3>Example 2: Sad Emoji → Happy Emoji</h3>
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_2_2/sad_emoji.jpg" alt="Sad Emoji">
+          <figcaption><strong>Sad Emoji</strong><br>Low frequencies</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_2/happy_emoji.png" alt="Happy Emoji">
+          <figcaption><strong>Happy Emoji</strong><br>High frequencies</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_2/sad_happy_emoji_hybrid.png" alt="Emoji Hybrid">
+          <figcaption><strong>Hybrid Result</strong><br>σ<sub>1</sub>=3, σ<sub>2</sub>=60</figcaption>
+        </figure>
+      </div>
+      
+      <h3>Example 3: Batman → Joker</h3>
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_2_2/joker.png" alt="Joker">
+          <figcaption><strong>Joker</strong><br>Low frequencies</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_2/batman.png" alt="Batman">
+          <figcaption><strong>Batman</strong><br>High frequencies</figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_2/batman_joker_hybrid.png" alt="Batman Joker Hybrid">
+          <figcaption><strong>Hybrid Result</strong><br>σ<sub>1</sub>=21, σ<sub>2</sub>=200</figcaption>
+        </figure>
+      </div>
+    </section>
+    
+    <!-- Part 2.3 & 2.4 -->
+    <section class="section" id="part-2-3-4">
+      <h2>Part 2.3 & 2.4: Multi-resolution Blending</h2>
+      <p>Implementing Gaussian and Laplacian stacks for seamless image blending using the technique from Burt and Adelson.</p>
+      
+      <h3>Example 1: Apple + Orange (Oraple)</h3>
+      
+      <h4>Original Images</h4>
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_2_34/spline/apple.jpeg" alt="Apple">
+          <figcaption><strong>Apple</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_34/spline/orange.jpeg" alt="Orange">
+          <figcaption><strong>Orange</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_34/apple_orange_blend.png" alt="Apple Orange Blend">
+          <figcaption><strong>Blended Result (Oraple)</strong><br>Vertical seam blending</figcaption>
+        </figure>
+      </div>
+      
+      <h4>Laplacian Stack Visualization (Recreating Figure 3.42)</h4>
+      <div class="center-media">
+        <figure class="media">
+          <img src="part_2_34/detailed_apple_orange_blend.png" alt="Detailed Apple Orange" class="full-width-image">
+          <figcaption><strong>Multi-resolution Blending Process</strong><br>
+          Showing levels 0, 2, 4 of Laplacian stacks and final reconstructions<br></figcaption>
+        </figure>
+      </div>
+      
+      <h3>Example 2: If the Earth was a Moon of Jupiter (Irregular Mask)</h3>
+      
+      <h4>Original Images and Result</h4>
+      <div class="comparison-row">
+        <figure class="media">
+          <img src="part_2_34/jupiter.jpeg" alt="Jupiter">
+          <figcaption><strong>Jupiter</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_34/night_sky.jpeg" alt="Night Sky">
+          <figcaption><strong>Night Sky</strong></figcaption>
+        </figure>
+        <figure class="media">
+          <img src="part_2_34/jupiter_night_sky_blend.png" alt="Jupiter Night Sky Blend">
+          <figcaption><strong>Blended Result</strong><br>Jupiter in night sky with circular mask</figcaption>
+        </figure>
+      </div>
+      
+      <h4>Laplacian Stack Visualization</h4>
+      <div class="center-media">
+        <figure class="media">
+          <img src="part_2_34/detailed_jupiter_night_sky_blend.png" alt="Detailed Jupiter Blend" class="full-width-image">
+          <figcaption><strong>Multi-resolution Blending Process</strong><br>
+          Levels 0, 2, 4 showing Jupiter and night sky contributions at each frequency band</figcaption>
+        </figure>
+      </div>
+      
+      <h3>Example 3: If Apple and Samsung Collaborated on a Phone (Creative Blend with Two Masks)</h3>
+      <p>For this example, I created two different blends using separate masks, where I add the Apple logo to the Samsung phone and the Samsung logo to the iPhone.</p>
+      
+      <h4>Laplacian Stack Visualization (iPhone Mask)</h4>
+      <div class="center-media">
+        <figure class="media">
+          <img src="part_2_34/detailed_iphone_samsung_blend.png" alt="Detailed iPhone Samsung" class="full-width-image">
+          <figcaption><strong>Blending with iPhone Mask</strong><br>
+          Multi-resolution process showing how Apple logo is seamlessly blended into Samsung phone</figcaption>
+        </figure>
+      </div>
+      
+      <h4>Laplacian Stack Visualization (Samsung Mask)</h4>
+      <div class="center-media">
+        <figure class="media">
+          <img src="part_2_34/detailed_samsung_iphone_blend.png" alt="Detailed Samsung iPhone" class="full-width-image">
+          <figcaption><strong>Blending with Samsung Mask</strong><br>
+          Alternative blend showing Samsung logo is seamlessly blended into iPhone</figcaption>
+        </figure>
+      </div>
+      
+      <div class="description">
+        <p><strong>Implementation Notes:</strong> I implemented Gaussian and Laplacian stacks from scratch without using built-in pyramid functions. The Gaussian stack is created by repeatedly applying Gaussian blur with increasing sigma values (σ = 2<sup>i</sup>) without downsampling. The Laplacian stack is computed as the difference between consecutive levels of the Gaussian stack, with the final level being the last Gaussian level itself. For blending, I also create a Gaussian stack for the mask, which ensures smooth transitions across frequency bands. The final blended image is the sum of all Laplacian stack levels.</p>
+      </div>
+    </section>
+    
+    <!-- Bells and Whistles / Learnings -->
+    <section class="section" id="conclusion">
+      <h2>What I Learned</h2>
+      <div class="description">
+        <p>The most important thing I learned from this project is how powerful frequency-domain thinking is for image processing. The idea that images can be decomposed into different frequency bands and manipulated separately is fundamental to many computer vision techniques. Multi-resolution blending, in particular, showed me how to seamlessly combine images by treating each frequency band differently: the high frequencies define sharp boundaries while low frequencies create smooth transitions. This approach to image blending is far superior to simple alpha blending and demonstrates why understanding the Fourier transform and frequency analysis is crucial for advanced image manipulation.</p>
+        
+        <p>Additionally, implementing convolution from scratch deepened my understanding of how this fundamental operation works and the importance of optimization through vectorization. The 1000× speedup from 4 loops to 2 loops demonstrated how leveraging NumPy's array operations can dramatically improve performance while maintaining code clarity.</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+
