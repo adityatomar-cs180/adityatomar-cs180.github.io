@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS180 Project 3 Gallery</title>
+  <link rel="stylesheet" href="styles.css">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Image warping and mosaicing results">
+  <meta name="robots" content="noindex, nofollow">
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <h1>Project 3: Image Warping and Mosaicing</h1>
+    </header>
+
+    <section class="section" id="intro">
+      <h2>Overview</h2>
+      <p>This project explores image warping and mosaicing techniques. The goal is to take multiple photographs and create seamless image mosaics by computing homographies, warping images, and blending them together. The project involves recovering homographies from point correspondences, implementing image warping with different interpolation methods, and creating panoramic mosaics through weighted blending.</p>
+    </section>
+
+    <section class="section" id="part-a1">
+      <h2>Part A.1: Image Acquisition</h2>
+      <p>I captured two sets of images with projective transformations between them.<p>
+
+      <div class="row groups">
+        <div class="group">
+          <h3 style="margin:0 0 16px 0;font-size:18px;text-align:center">Set 1</h3>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <figure class="media" style="flex:1;min-width:300px">
+              <img src="media/set1/left.png" alt="Set 1 Left Image">
+              <figcaption><strong>Left Image</strong></figcaption>
+            </figure>
+            <figure class="media" style="flex:1;min-width:300px">
+              <img src="media/set1/middle.png" alt="Set 1 Middle Image">
+              <figcaption><strong>Middle Image</strong></figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 style="margin:0 0 16px 0;font-size:18px;text-align:center">Set 2</h3>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <figure class="media" style="flex:1;min-width:300px">
+              <img src="media/set2/left.png" alt="Set 2 Left Image">
+              <figcaption><strong>Left Image</strong></figcaption>
+            </figure>
+            <figure class="media" style="flex:1;min-width:300px">
+              <img src="media/set2/middle.png" alt="Set 2 Middle Image">
+              <figcaption><strong>Middle Image</strong></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="part-a2">
+      <h2>Part A.2: Recovering Homographies</h2>
+      <p>To align images, I computed homographies from point correspondences. A homography H is a 3x3 matrix with 8 degrees of freedom that maps points from one image to another via the equation p' = Hp. The homography is recovered by setting up a linear system of equations from n point correspondences and solving using least-squares.</p>
+
+      <div class="description">
+        <p><strong>System of Equations:</strong> For each point correspondence (x₁, y₁) → (x₂, y₂), we generate two equations. With n correspondences, we get 2n equations for 8 unknowns (h₀₀, h₀₁, h₀₂, h₁₀, h₁₁, h₁₂, h₂₀, h₂₁), forming an overdetermined system Ah = b that is solved via least-squares.</p>
+      </div>
+
+      <div style="margin-top:24px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 1: Point Correspondences and Homography</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/set1_correspondences.png" alt="Set 1 Correspondences">
+            <figcaption><strong>9 point correspondences between left and middle images</strong></figcaption>
+          </figure>
+        </div>
+        <div class="description" style="margin-top:16px">
+          <p><strong>Recovered Homography Matrix H:</strong></p>
+          <pre style="margin:8px 0;font-family:monospace;font-size:13px;line-height:1.5">H = [  2.611672   -0.006122  -711.416183]
+    [  0.640675    2.106629  -304.188521]
+    [  0.002509    0.000031    1.000000]</pre>
+        </div>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 2: Point Correspondences and Homography</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/set2_correspondences.png" alt="Set 2 Correspondences">
+            <figcaption><strong>9 point correspondences between left and middle images</strong></figcaption>
+          </figure>
+        </div>
+        <div class="description" style="margin-top:16px">
+          <p><strong>Recovered Homography Matrix H:</strong></p>
+          <pre style="margin:8px 0;font-family:monospace;font-size:13px;line-height:1.5">H = [  3.159070    0.007560  -566.810941]
+    [  0.810527    2.232690  -299.137411]
+    [  0.003399   -0.000039    1.000000]</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="part-a3">
+      <h2>Part A.3: Image Warping and Rectification</h2>
+      <p>I implemented two interpolation methods for image warping. Both use inverse warping to avoid holes in the output. I performed rectification on images containing rectangular objects to validate the homography and warping implementations.</p>
+
+      <div style="margin-top:24px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Rectification Example 1</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/rect1_comparison.png" alt="Rectification 1 Comparison">
+            <figcaption><strong>Original image with selected corners, Nearest Neighbor (1.875s), and Bilinear (3.363s)</strong></figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Rectification Example 2</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/rect2_comparison.png" alt="Rectification 2 Comparison">
+            <figcaption><strong>Original image with selected corners, Nearest Neighbor (0.967s), and Bilinear (1.987s)</strong></figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="description" style="margin-top:24px">
+        <p><strong>Speed vs Quality Trade-offs:</strong></p>
+        <p style="margin-top:8px">Nearest neighbor interpolation is approximately 2x faster than bilinear interpolation, completing in under 1 second compared to nearly 2 seconds for bilinear. This speed advantage comes from its simplicity. Nearest neighbor simply rounds coordinates to the closest pixel, requiring only one lookup per output pixel.</p>
+        <p style="margin-top:8px">However, bilinear interpolation produces noticeably smoother and higher-quality results. It computes a weighted average of the four neighboring pixels, which reduces aliasing artifacts and eliminates the blocky, pixelated appearance that nearest neighbor produces, especially along edges. The extra computational cost (4 pixel lookups plus interpolation calculations) is well worth it for final output quality.</p>
+      </div>
+    </section>
+
+    <section class="section" id="part-a4">
+      <h2>Part A.4: Image Mosaicing</h2>
+      <p> I created image mosaics by warping source images to align with a reference image and blending them using weighted averaging. The blending procedure uses distance transform-based feathering to create smooth transitions in overlap regions and eliminate edge artifacts.</p>
+
+      <div class="description">
+        <p><strong>Blending Procedure:</strong></p>
+        <p style="margin-top:8px"><strong>1. Coordinate System Setup:</strong> The homography H is computed from source to reference image. The reference image remains unwarped (identity transform), and a global bounding box is calculated by transforming all image corners.</p>
+        <p style="margin-top:8px"><strong>2. Image Warping:</strong> The source image is warped using bilinear interpolation with inverse warping to avoid holes. A binary mask tracks valid pixels in the warped image.</p>
+        <p style="margin-top:8px"><strong>3. Weight Generation:</strong> Distance transform is applied to each image's mask. Weights are computed as distance from edge divided by maximum distance, creating smooth falloff from 1.0 at center to 0.0 at edges. This is the feathering approach that enables seamless blending.</p>
+        <p style="margin-top:8px"><strong>4. Weighted Blending:</strong> For each pixel in the overlap region, the final color is computed as mosaic[x,y] = Σ(image[x,y] × weight[x,y]) / Σ(weight[x,y]). This weighted averaging reduces edge artifacts and ghosting by smoothly transitioning between images based on distance from their centers.</p>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Mosaic 1 (Set 1)</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/mosaic_set1.png" alt="Mosaic Set 1">
+            <figcaption><strong>Panoramic mosaic from Set 1</strong><br>Created by warping left image and blending with middle image</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Mosaic 2 (Set 2)</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/mosaic_set2.png" alt="Mosaic Set 2">
+            <figcaption><strong>Panoramic mosaic from Set 2</strong><br>Created by warping left image and blending with middle image</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
