@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CS180 Project 3 Gallery</title>
+  <title>CS180 Project 3: Image Warping and Mosaicing</title>
   <link rel="stylesheet" href="styles.css">
   <meta name="color-scheme" content="light dark">
   <meta name="description" content="Image warping and mosaicing results">
@@ -17,12 +17,18 @@
 
     <section class="section" id="intro">
       <h2>Overview</h2>
-      <p>This project explores image warping and mosaicing techniques. The goal is to take multiple photographs and create seamless image mosaics by computing homographies, warping images, and blending them together. The project involves recovering homographies from point correspondences, implementing image warping with different interpolation methods, and creating panoramic mosaics through weighted blending.</p>
+      <p>This project explores image warping and mosaicing techniques in two parts. <strong>Part A</strong> focuses on manually creating image mosaics by computing homographies from user-selected correspondences, implementing image warping with different interpolation methods, and blending images together. <strong>Part B</strong> automates this process using feature detection, matching, and RANSAC to robustly estimate homographies without manual intervention.</p>
+    </section>
+
+    <!-- ==================== PART A ==================== -->
+    
+    <section class="section" id="part-a">
+      <h2 style="color:#3b82f6;font-size:26px;margin-bottom:24px">Part A: Manual Image Mosaicing</h2>
     </section>
 
     <section class="section" id="part-a1">
       <h2>Part A.1: Image Acquisition</h2>
-      <p>I captured two sets of images with projective transformations between them.<p>
+      <p>I captured three sets of images with projective transformations between them by fixing the center of projection and rotating the camera. Each set contains overlapping views that will be stitched into panoramic mosaics.</p>
 
       <div class="row groups">
         <div class="group">
@@ -34,13 +40,13 @@
             </figure>
             <figure class="media" style="flex:1;min-width:300px">
               <img src="media/set1/middle.png" alt="Set 1 Middle Image">
-              <figcaption><strong>Middle Image</strong></figcaption>
+              <figcaption><strong>Middle Image (Reference)</strong></figcaption>
             </figure>
           </div>
         </div>
 
         <div class="group">
-          <h3 style="margin:0 0 16px 0;font-size:18px;text-align:center">Set 2</h3>
+          <h3 style="margin:0 0 16px 0;font-size:18px;text-align:center">Set 2: Interior Scene</h3>
           <div style="display:flex;gap:16px;flex-wrap:wrap">
             <figure class="media" style="flex:1;min-width:300px">
               <img src="media/set2/left.png" alt="Set 2 Left Image">
@@ -48,7 +54,21 @@
             </figure>
             <figure class="media" style="flex:1;min-width:300px">
               <img src="media/set2/middle.png" alt="Set 2 Middle Image">
-              <figcaption><strong>Middle Image</strong></figcaption>
+              <figcaption><strong>Middle Image (Reference)</strong></figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 style="margin:0 0 16px 0;font-size:18px;text-align:center">Set 3</h3>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <figure class="media" style="flex:1;min-width:300px">
+              <img src="media/set1/left.png" alt="Set 3 Left Image">
+              <figcaption><strong>Left Image</strong></figcaption>
+            </figure>
+            <figure class="media" style="flex:1;min-width:300px">
+              <img src="media/set1/middle.png" alt="Set 3 Middle Image">
+              <figcaption><strong>Middle Image (Reference)</strong></figcaption>
             </figure>
           </div>
         </div>
@@ -57,10 +77,10 @@
 
     <section class="section" id="part-a2">
       <h2>Part A.2: Recovering Homographies</h2>
-      <p>To align images, I computed homographies from point correspondences. A homography H is a 3x3 matrix with 8 degrees of freedom that maps points from one image to another via the equation p' = Hp. The homography is recovered by setting up a linear system of equations from n point correspondences and solving using least-squares.</p>
+      <p>To align images, I computed homographies from manually selected point correspondences. A homography H is a 3×3 matrix with 8 degrees of freedom that maps points from one image to another via the equation p' = Hp. I implemented the <code>computeH()</code> function which takes n point pairs and recovers H by solving an overdetermined linear system using least-squares.</p>
 
       <div class="description">
-        <p><strong>System of Equations:</strong> For each point correspondence (x₁, y₁) → (x₂, y₂), we generate two equations. With n correspondences, we get 2n equations for 8 unknowns (h₀₀, h₀₁, h₀₂, h₁₀, h₁₁, h₁₂, h₂₀, h₂₁), forming an overdetermined system Ah = b that is solved via least-squares.</p>
+        <p><strong>Algorithm:</strong> For each point correspondence (x₁, y₁) → (x₂, y₂), I generate two equations. With n correspondences, this creates a system of 2n equations for 8 unknowns (h₀₀, h₀₁, h₀₂, h₁₀, h₁₁, h₁₂, h₂₀, h₂₁), which I solve using numpy's least-squares solver. I used 9 correspondences per image pair to ensure a robust solution.</p>
       </div>
 
       <div style="margin-top:24px">
@@ -68,7 +88,7 @@
         <div class="center-media">
           <figure class="media">
             <img src="media/set1_correspondences.png" alt="Set 1 Correspondences">
-            <figcaption><strong>9 point correspondences between left and middle images</strong></figcaption>
+            <figcaption><strong>9 manually selected point correspondences between left and middle images</strong></figcaption>
           </figure>
         </div>
         <div class="description" style="margin-top:16px">
@@ -84,7 +104,7 @@
         <div class="center-media">
           <figure class="media">
             <img src="media/set2_correspondences.png" alt="Set 2 Correspondences">
-            <figcaption><strong>9 point correspondences between left and middle images</strong></figcaption>
+            <figcaption><strong>9 manually selected point correspondences between left and middle images</strong></figcaption>
           </figure>
         </div>
         <div class="description" style="margin-top:16px">
@@ -98,14 +118,18 @@
 
     <section class="section" id="part-a3">
       <h2>Part A.3: Image Warping and Rectification</h2>
-      <p>I implemented two interpolation methods for image warping. Both use inverse warping to avoid holes in the output. I performed rectification on images containing rectangular objects to validate the homography and warping implementations.</p>
+      <p>I implemented image warping with two interpolation methods: nearest neighbor and bilinear. Both use inverse warping to avoid holes in the output image. To validate my implementation, I performed rectification on images containing rectangular objects, computing homographies that transform tilted rectangles into axis-aligned rectangles.</p>
+
+      <div class="description">
+        <p><strong>Implementation Details:</strong> Inverse warping works by iterating over output pixels, transforming their coordinates back to the source image using H⁻¹, and sampling the source. Nearest neighbor rounds to the closest pixel (fast but blocky), while bilinear interpolation computes a weighted average of the four surrounding pixels (slower but smoother).</p>
+      </div>
 
       <div style="margin-top:24px">
         <h3 style="margin:0 0 16px 0;font-size:18px">Rectification Example 1</h3>
         <div class="center-media">
           <figure class="media">
             <img src="media/rect1_comparison.png" alt="Rectification 1 Comparison">
-            <figcaption><strong>Original image with selected corners, Nearest Neighbor (1.875s), and Bilinear (3.363s)</strong></figcaption>
+            <figcaption><strong>Original image with selected corners, Nearest Neighbor (1.91s), and Bilinear (3.35s)</strong></figcaption>
           </figure>
         </div>
       </div>
@@ -115,28 +139,28 @@
         <div class="center-media">
           <figure class="media">
             <img src="media/rect2_comparison.png" alt="Rectification 2 Comparison">
-            <figcaption><strong>Original image with selected corners, Nearest Neighbor (0.967s), and Bilinear (1.987s)</strong></figcaption>
+            <figcaption><strong>Original image with selected corners, Nearest Neighbor (1.47s), and Bilinear (2.54s)</strong></figcaption>
           </figure>
         </div>
       </div>
 
       <div class="description" style="margin-top:24px">
         <p><strong>Speed vs Quality Trade-offs:</strong></p>
-        <p style="margin-top:8px">Nearest neighbor interpolation is approximately 2x faster than bilinear interpolation, completing in under 1 second compared to nearly 2 seconds for bilinear. This speed advantage comes from its simplicity. Nearest neighbor simply rounds coordinates to the closest pixel, requiring only one lookup per output pixel.</p>
-        <p style="margin-top:8px">However, bilinear interpolation produces noticeably smoother and higher-quality results. It computes a weighted average of the four neighboring pixels, which reduces aliasing artifacts and eliminates the blocky, pixelated appearance that nearest neighbor produces, especially along edges. The extra computational cost (4 pixel lookups plus interpolation calculations) is well worth it for final output quality.</p>
+        <p style="margin-top:8px">Nearest neighbor interpolation is approximately 1.7× faster than bilinear interpolation. This speed advantage comes from its simplicity—it requires only a single pixel lookup per output pixel, compared to bilinear's four lookups plus interpolation calculations.</p>
+        <p style="margin-top:8px">However, bilinear interpolation produces noticeably smoother and higher-quality results. It eliminates the blocky, pixelated appearance that nearest neighbor produces, especially along edges and in regions with fine detail. The quality improvement is clearly visible in the rectified images above. For final outputs where visual quality matters, bilinear interpolation is worth the extra computational cost.</p>
       </div>
     </section>
 
     <section class="section" id="part-a4">
       <h2>Part A.4: Image Mosaicing</h2>
-      <p> I created image mosaics by warping source images to align with a reference image and blending them using weighted averaging. The blending procedure uses distance transform-based feathering to create smooth transitions in overlap regions and eliminate edge artifacts.</p>
+      <p>I created image mosaics by warping source images to align with a reference image and blending them using distance transform-based feathering. This approach creates smooth transitions in overlap regions and eliminates visible seams.</p>
 
       <div class="description">
         <p><strong>Blending Procedure:</strong></p>
-        <p style="margin-top:8px"><strong>1. Coordinate System Setup:</strong> The homography H is computed from source to reference image. The reference image remains unwarped (identity transform), and a global bounding box is calculated by transforming all image corners.</p>
-        <p style="margin-top:8px"><strong>2. Image Warping:</strong> The source image is warped using bilinear interpolation with inverse warping to avoid holes. A binary mask tracks valid pixels in the warped image.</p>
-        <p style="margin-top:8px"><strong>3. Weight Generation:</strong> Distance transform is applied to each image's mask. Weights are computed as distance from edge divided by maximum distance, creating smooth falloff from 1.0 at center to 0.0 at edges. This is the feathering approach that enables seamless blending.</p>
-        <p style="margin-top:8px"><strong>4. Weighted Blending:</strong> For each pixel in the overlap region, the final color is computed as mosaic[x,y] = Σ(image[x,y] × weight[x,y]) / Σ(weight[x,y]). This weighted averaging reduces edge artifacts and ghosting by smoothly transitioning between images based on distance from their centers.</p>
+        <p style="margin-top:8px"><strong>1. Coordinate System:</strong> I keep the reference image unwarped (identity transform) and warp the source image using the computed homography. I calculate a global bounding box by transforming all image corners.</p>
+        <p style="margin-top:8px"><strong>2. Image Warping:</strong> I warp the source image using bilinear interpolation with inverse warping. A binary mask tracks which pixels have valid data in each warped image.</p>
+        <p style="margin-top:8px"><strong>3. Weight Generation:</strong> I apply distance transform to each image's mask, creating weights that fall off smoothly from 1.0 at the center to 0.0 at edges. This feathering approach is key to seamless blending.</p>
+        <p style="margin-top:8px"><strong>4. Weighted Blending:</strong> For each pixel, I compute the final color as a weighted average: pixel = Σ(image × weight) / Σ(weight). This eliminates edge artifacts by smoothly transitioning between images based on their distance from image centers.</p>
       </div>
 
       <div style="margin-top:32px">
@@ -158,6 +182,274 @@
           </figure>
         </div>
       </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Mosaic 3 (Set 3)</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/mosaic_set3.png" alt="Mosaic Set 3">
+            <figcaption><strong>Panoramic mosaic from Set 3</strong><br>Created by warping left image and blending with middle image</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PART B ==================== -->
+
+    <section class="section" id="part-b">
+      <h2 style="color:#3b82f6;font-size:26px;margin-bottom:24px">Part B: Automatic Feature Matching and Stitching</h2>
+      <p>In Part B, I automated the image stitching pipeline by implementing feature detection, matching, and RANSAC-based homography estimation. This eliminates the need for manual point selection and makes the process robust to outliers.</p>
+    </section>
+
+    <section class="section" id="part-b1">
+      <h2>Part B.1: Harris Corner Detection and ANMS</h2>
+      <p>I detected interest points using the Harris corner detector and applied Adaptive Non-Maximal Suppression (ANMS) to select 500 spatially well-distributed corners. ANMS ensures better coverage across the image compared to simply selecting the strongest corners, which tend to cluster in high-texture regions.</p>
+
+      <div class="description">
+        <p><strong>ANMS Algorithm:</strong> For each corner i, I compute its suppression radius r_i as the minimum distance to any corner j where f(x_i) < 0.9 × f(x_j). I then select the 500 corners with the largest suppression radii. This ensures that selected corners are spatially spread out while still being strong features.</p>
+      </div>
+
+      <div style="margin-top:24px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 1 Left Image: Harris vs ANMS</h3>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+          <figure class="media" style="flex:1;min-width:300px;max-width:500px">
+            <img src="media/b1_output/b1_set1_left_harris.png" alt="Set 1 Left Harris Corners">
+            <figcaption><strong>All Harris Corners (6,771 detected)</strong><br>Yellow markers show all detected corners</figcaption>
+          </figure>
+          <figure class="media" style="flex:1;min-width:300px;max-width:500px">
+            <img src="media/b1_output/b1_set1_left_anms.png" alt="Set 1 Left ANMS">
+            <figcaption><strong>After ANMS (500 selected)</strong><br>Red markers show spatially distributed corners</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 2 Middle Image: Harris vs ANMS</h3>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+          <figure class="media" style="flex:1;min-width:300px;max-width:500px">
+            <img src="media/b1_output/b1_set2_middle_harris.png" alt="Set 2 Middle Harris Corners">
+            <figcaption><strong>All Harris Corners (6,723 detected)</strong><br>Yellow markers show all detected corners</figcaption>
+          </figure>
+          <figure class="media" style="flex:1;min-width:300px;max-width:500px">
+            <img src="media/b1_output/b1_set2_middle_anms.png" alt="Set 2 Middle ANMS">
+            <figcaption><strong>After ANMS (500 selected)</strong><br>Red markers show spatially distributed corners</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="description" style="margin-top:24px">
+        <p><strong>Observations:</strong> The ANMS-selected corners (red) are much more evenly distributed across the image compared to the raw Harris corners (yellow), which cluster heavily in high-texture areas. This spatial distribution is crucial for robust matching and homography estimation, as it ensures we have correspondences across the entire image rather than just in textured regions.</p>
+      </div>
+    </section>
+
+    <section class="section" id="part-b2">
+      <h2>Part B.2: Feature Descriptor Extraction</h2>
+      <p>For each corner, I extracted an 8×8 feature descriptor by sampling from a 40×40 pixel window around the corner. I used a sample spacing of 5 pixels to make the descriptor more robust to localization errors. Each descriptor is bias/gain normalized (mean=0, std=1) to achieve invariance to lighting changes.</p>
+
+      <div class="description">
+        <p><strong>Extraction Process:</strong> For each corner point, I: (1) Extract a 40×40 window centered at the corner, (2) Apply Gaussian blur (σ=1.0) for stability, (3) Downsample to 8×8 by sampling every 5 pixels, (4) Flatten to a 64-dimensional vector, (5) Normalize to mean=0 and std=1. This creates a simple but effective descriptor that's robust to small positioning errors and lighting variations.</p>
+      </div>
+
+      <div style="margin-top:24px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Example Feature Descriptors</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/b2_output/b2_features_set1_left.png" alt="Feature Descriptors Set 1">
+            <figcaption><strong>10 feature descriptors from Set 1 Left image</strong><br>Each 8×8 patch represents the normalized appearance around a corner</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div style="margin-top:24px" class="center-media">
+        <figure class="media">
+          <img src="media/b2_output/b2_features_set2_middle.png" alt="Feature Descriptors Set 2">
+          <figcaption><strong>10 feature descriptors from Set 2 Middle image</strong><br>Descriptors capture local image structure at different locations</figcaption>
+        </figure>
+      </div>
+
+      <div class="description" style="margin-top:24px">
+        <p><strong>Why This Works:</strong> The 8×8 descriptors capture enough local structure to distinguish features while being small enough for efficient matching. The lower-frequency sampling (every 5 pixels from a 40×40 window) makes them more robust to corner localization errors compared to direct pixel sampling. Bias/gain normalization ensures the descriptors are invariant to linear lighting changes.</p>
+      </div>
+    </section>
+
+    <section class="section" id="part-b3">
+      <h2>Part B.3: Feature Matching</h2>
+      <p>I matched features between image pairs using Lowe's ratio test. For each feature in image 1, I find its nearest and second-nearest neighbors in image 2. If the ratio of these distances is below 0.7, I accept the match. This ratio test is more discriminative than absolute distance thresholding because it accounts for the local structure of feature space.</p>
+
+      <div class="description">
+        <p><strong>Lowe's Ratio Test:</strong> The key insight is that correct matches should have distinctive nearest neighbors, while incorrect matches have similar distances to both 1-NN and 2-NN. By thresholding on ratio = dist(1-NN) / dist(2-NN) < 0.7, I accept only matches where the best match is significantly better than the second-best, effectively filtering out ambiguous matches.</p>
+      </div>
+
+      <div style="margin-top:24px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 1: Feature Matches (59 matches)</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/b3_output/b3_matches_set_1.png" alt="Matches Set 1">
+            <figcaption><strong>59 feature matches between left and middle images</strong><br>Corresponding features shown with matching colors</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 2: Feature Matches (57 matches)</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/b3_output/b3_matches_set_2.png" alt="Matches Set 2">
+            <figcaption><strong>57 feature matches between left and middle images</strong><br>Corresponding features shown with matching colors</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 3: Feature Matches (41 matches)</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/b3_output/b3_matches_set_3.png" alt="Matches Set 3">
+            <figcaption><strong>41 feature matches between left and middle images</strong><br>Corresponding features shown with matching colors</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="description" style="margin-top:24px">
+        <p><strong>Results:</strong> The ratio test successfully finds 40-60 putative matches per image pair. While many of these are correct, some are outliers that will be filtered by RANSAC in the next step. The number of matches varies based on image content and overlap—Set 3 has fewer matches due to less distinctive texture in some regions.</p>
+      </div>
+    </section>
+
+    <section class="section" id="part-b4">
+      <h2>Part B.4: RANSAC and Automatic Stitching</h2>
+      <p>I used 4-point RANSAC to robustly estimate homographies from the feature matches. RANSAC is essential because 20-40% of feature matches are typically outliers. The algorithm randomly samples 4 matches, computes a homography, counts inliers (matches within 3 pixels of prediction), and keeps the best result over 2,000 iterations.</p>
+
+      <div class="description">
+        <p><strong>RANSAC Algorithm:</strong> For each of 2,000 iterations: (1) Randomly select 4 point pairs, (2) Compute H using my <code>computeH()</code> function from Part A, (3) Transform all points using H, (4) Count inliers where ||H×p_i - q_i|| < 3 pixels, (5) Keep H with most inliers. Finally, recompute H using all inliers for improved accuracy. With an expected 60-70% inlier rate, 2,000 iterations gives >99.99% probability of success.</p>
+      </div>
+
+      <div style="margin-top:24px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 1 RANSAC Results: 37/59 inliers (62.7%)</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/b4_output/b4_ransac_set_1.png" alt="RANSAC Set 1">
+            <figcaption><strong>RANSAC inlier/outlier classification</strong><br>Green = inliers (37), Red = outliers (22)</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 2 RANSAC Results: 54/57 inliers (94.7%)</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/b4_output/b4_ransac_set_2.png" alt="RANSAC Set 2">
+            <figcaption><strong>RANSAC inlier/outlier classification</strong><br>Green = inliers (54), Red = outliers (3)</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 3 RANSAC Results: 20/41 inliers (48.8%)</h3>
+        <div class="center-media">
+          <figure class="media">
+            <img src="media/b4_output/b4_ransac_set_3.png" alt="RANSAC Set 3">
+            <figcaption><strong>RANSAC inlier/outlier classification</strong><br>Green = inliers (20), Red = outliers (21)</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="description" style="margin-top:24px">
+        <p><strong>RANSAC Performance:</strong> Set 2 achieved an excellent 94.7% inlier rate, indicating very accurate feature matching. Set 1 had 62.7% inliers, which is good and typical for this task. Set 3 had the lowest rate at 48.8%, likely due to less distinctive features and more challenging lighting. Despite the varying inlier rates, RANSAC successfully computed accurate homographies for all three sets, demonstrating its robustness to outliers.</p>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Automatic Mosaics</h3>
+        
+        <div style="margin-top:24px">
+          <h4 style="margin:0 0 12px 0;font-size:16px;font-weight:600">Set 1 Automatic Mosaic</h4>
+          <div class="center-media">
+            <figure class="media">
+              <img src="media/b4_output/b4_mosaic_auto_set_1.png" alt="Auto Mosaic Set 1">
+              <figcaption><strong>Automatically stitched panorama from Set 1</strong><br>Created using RANSAC-estimated homography</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div style="margin-top:24px">
+          <h4 style="margin:0 0 12px 0;font-size:16px;font-weight:600">Set 2 Automatic Mosaic</h4>
+          <div class="center-media">
+            <figure class="media">
+              <img src="media/b4_output/b4_mosaic_auto_set_2.png" alt="Auto Mosaic Set 2">
+              <figcaption><strong>Automatically stitched panorama from Set 2</strong><br>Created using RANSAC-estimated homography</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div style="margin-top:24px">
+          <h4 style="margin:0 0 12px 0;font-size:16px;font-weight:600">Set 3 Automatic Mosaic</h4>
+          <div class="center-media">
+            <figure class="media">
+              <img src="media/b4_output/b4_mosaic_auto_set_3.png" alt="Auto Mosaic Set 3">
+              <figcaption><strong>Automatically stitched panorama from Set 3</strong><br>Created using RANSAC-estimated homography</figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="comparison">
+      <h2>Manual vs Automatic Stitching Comparison</h2>
+      <p>Here I compare the mosaics created manually (Part A) with those created automatically (Part B). The automatic approach achieves similar quality without requiring manual correspondence selection, demonstrating the effectiveness of feature-based methods.</p>
+
+      <div style="margin-top:24px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 1 Comparison</h3>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <figure class="media" style="flex:1;min-width:400px">
+            <img src="media/mosaic_set1.png" alt="Manual Set 1">
+            <figcaption><strong>Manual Stitching (Part A)</strong><br>9 manually selected correspondences</figcaption>
+          </figure>
+          <figure class="media" style="flex:1;min-width:400px">
+            <img src="media/b4_output/b4_mosaic_auto_set_1.png" alt="Auto Set 1">
+            <figcaption><strong>Automatic Stitching (Part B)</strong><br>37 RANSAC inliers from 59 matches</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 2 Comparison</h3>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <figure class="media" style="flex:1;min-width:400px">
+            <img src="media/mosaic_set2.png" alt="Manual Set 2">
+            <figcaption><strong>Manual Stitching (Part A)</strong><br>9 manually selected correspondences</figcaption>
+          </figure>
+          <figure class="media" style="flex:1;min-width:400px">
+            <img src="media/b4_output/b4_mosaic_auto_set_2.png" alt="Auto Set 2">
+            <figcaption><strong>Automatic Stitching (Part B)</strong><br>54 RANSAC inliers from 57 matches</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 style="margin:0 0 16px 0;font-size:18px">Set 3 Comparison</h3>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <figure class="media" style="flex:1;min-width:400px">
+            <img src="media/mosaic_set3.png" alt="Manual Set 3">
+            <figcaption><strong>Manual Stitching (Part A)</strong><br>9 manually selected correspondences</figcaption>
+          </figure>
+          <figure class="media" style="flex:1;min-width:400px">
+            <img src="media/b4_output/b4_mosaic_auto_set_3.png" alt="Auto Set 3">
+            <figcaption><strong>Automatic Stitching (Part B)</strong><br>20 RANSAC inliers from 41 matches</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="description" style="margin-top:24px">
+        <p><strong>Analysis:</strong> The automatic mosaics are visually comparable to the manual ones, with slight differences in alignment due to different correspondence points being used. Set 2 shows the closest match because it had the highest RANSAC inlier rate (94.7%). Set 1 and Set 3 show minor alignment differences, particularly visible in the overlap regions, but both produce high-quality panoramas.</p>
+        <p style="margin-top:8px">The automatic approach has clear advantages: it's faster (no manual point selection), more objective (no human error in clicking), and potentially more accurate (uses many more correspondences—20-54 inliers vs 9 manual points). The main trade-off is computational cost, but this is negligible compared to the time saved on manual correspondence selection.</p>
+      </div>
+    </section>
+
+    <section class="section" id="reflection">
+      <h2>What I Learned</h2>
+      <p>The coolest thing I learned from this project is how robust feature-based methods can completely automate a task that seems to require careful manual work. In Part A, I spent considerable time carefully selecting corresponding points between images—one wrong click could throw off the entire homography. But in Part B, the automatic pipeline not only matched the quality of my manual work but often exceeded it by using many more correspondences.</p>
+      <p style="margin-top:12px">I was particularly impressed by how well RANSAC handles outliers. Even when 40-50% of feature matches were incorrect (as in Set 3), RANSAC still recovered an accurate homography. This robustness is what makes feature-based methods practical for real-world applications where perfect matches are impossible.</p>
+      <p style="margin-top:12px">The project also gave me a deeper appreciation for the design choices in feature descriptors. The simple 8×8 bias/gain normalized patches worked surprisingly well, demonstrating that you don't always need complex descriptors like SIFT for good results. The key insight is sampling at a lower frequency (every 5 pixels from a 40×40 window) to build in robustness to localization errors.</p>
+      <p style="margin-top:12px">Finally, I learned that even simple blending techniques like distance transform-based feathering can produce seamless mosaics. The smooth weight falloff from image centers to edges elegantly handles the overlap regions without needing complex seam-cutting algorithms or multi-band blending.</p>
     </section>
   </main>
 </body>
