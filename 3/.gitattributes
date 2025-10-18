@@ -1,5 +1,0 @@
-b1_output/*.png filter=lfs diff=lfs merge=lfs -text
-b2_output/*.png filter=lfs diff=lfs merge=lfs -text
-b3_output/*.png filter=lfs diff=lfs merge=lfs -text
-b4_output/*.png filter=lfs diff=lfs merge=lfs -text
-*.png filter=lfs diff=lfs merge=lfs -text
